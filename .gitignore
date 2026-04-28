@@ -1,0 +1,53 @@
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+venv/
+.env/
+.venv/
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Logs
+*.log
+
+# PostgreSQL dumps
+*.sql
+
+# Python build files
+build/
+dist/
+*.egg-info/
+
+# Migrations cache
+**/__pycache__/
+
+# Swagger schema
+schema.yml
+```
