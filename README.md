@@ -152,3 +152,10 @@ python manage.py test
 * Payment integration
 * API documentation (Swagger)
 * Docker setup
+
+
+## API Documentation
+
+Swagger UI:
+
+![Swagger Screenshot](screenshots/swagger.png)
