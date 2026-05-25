@@ -33,6 +33,49 @@ Built with Django and Django REST Framework.
 
 ---
 
+
+## Docker Setup
+
+### Build Docker Image
+
+```bash
+docker build -t mydjango .
+```
+
+### Create Docker Network
+This network allows Django and PostgreSQL containers to communicate using container names.
+
+Example:
+- Django container connects to PostgreSQL using:
+  `postgres-db:5432`
+
+```bash
+docker network create mynetwork
+```
+
+### Run PostgreSQL Container
+
+```bash
+
+docker run --name postgres-db --network mynetwork -e POSTGRES_DB=ecommerce -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=1234 -p 5432:5432 -d postgres
+```
+
+### Run Django Container
+
+> Note:
+> Using `host.docker.internal` caused authentication and connection issues.
+> Containers communicate correctly using Docker networks and container names.
+
+```bash
+docker run --name django-api --network mynetwork -p 8000:8000 -e DATABASE_URL=postgresql://postgres:1234@postgres-db:5432/ecommerce mydjango
+```
+
+### Swagger Docs
+
+```text
+http://localhost:8000/api/docs/
+```
+
 ## API Structure
 
 ### Authentication
@@ -94,6 +137,7 @@ PAID → CANCELED
 Invalid transitions are blocked.
 
 ---
+
 ### Payment Flow
 
 - Orders are created with `PENDING` status.
@@ -103,7 +147,8 @@ Invalid transitions are blocked.
 - Paid orders can then be shipped by admin.
 
 ## Quick Start
-## Installation
+
+### Installation
 
 ```bash
 git clone <your-repo-url>
@@ -149,10 +194,9 @@ python manage.py test
 
 ## Future Improvements
 
-* Payment integration
-* API documentation (Swagger)
-* Docker setup
-
+* Real payment integration (Stripe)
+* Add Redis caching
+* Add CI/CD pipeline
 
 ## API Documentation
 
