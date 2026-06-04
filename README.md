@@ -1,6 +1,12 @@
 # E-commerce API (Django + DRF)
 
-A RESTful backend API for an e-commerce system with secure checkout, stock management, and structured order processing.
+![Django](https://img.shields.io/badge/Django-DRF-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue)
+![Python](https://img.shields.io/badge/Python-3.12-yellow)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Status](https://img.shields.io/badge/status-production-brightgreen)
+
+A scalable e-commerce REST API built with Django, DRF, and PostgreSQL.
 
 Built with Django and Django REST Framework.
 
@@ -33,47 +39,41 @@ Built with Django and Django REST Framework.
 
 ---
 
+## Run with Docker Compose
 
-## Docker Setup
-
-### Build Docker Image
-
+### Build and start containers
 ```bash
-docker build -t mydjango .
+docker compose up -d --build
+```
+### Apply database migrations
+```bash
+docker exec -it django-api python manage.py migrate
 ```
 
-### Create Docker Network
-This network allows Django and PostgreSQL containers to communicate using container names.
-
-Example:
-- Django container connects to PostgreSQL using:
-  `postgres-db:5432`
-
+### Create superuser
 ```bash
-docker network create mynetwork
+docker exec -it django-api python manage.py createsuperuser
 ```
-
-### Run PostgreSQL Container
-
+### Check running containers
 ```bash
-
-docker run --name postgres-db --network mynetwork -e POSTGRES_DB=ecommerce -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=1234 -p 5432:5432 -d postgres
+docker ps
 ```
-
-### Run Django Container
-
-> Note:
-> Using `host.docker.internal` caused authentication and connection issues.
-> Containers communicate correctly using Docker networks and container names.
-
+### Stop containers
 ```bash
-docker run --name django-api --network mynetwork -p 8000:8000 -e DATABASE_URL=postgresql://postgres:1234@postgres-db:5432/ecommerce mydjango
+docker compose down
 ```
-
+### Stop and remove volumes (reset database)
+```bash
+docker compose down -v
+```
+### Rebuild project from scratch
+```bash
+docker compose up -d --build
+```
 ### Swagger Docs
 
 ```text
-http://localhost:8000/api/docs/
+Swagger Docs: http://localhost:8000/api/docs/
 ```
 
 ## API Structure
@@ -152,7 +152,7 @@ Invalid transitions are blocked.
 
 ```bash
 git clone <your-repo-url>
-cd E_commerce
+cd django-ecommerce-api
 python -m venv venv
 venv\Scripts\activate
 pip install -r requirements.txt
