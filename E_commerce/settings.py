@@ -112,9 +112,18 @@ WSGI_APPLICATION = 'E_commerce.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+DEBUG = config("DEBUG", default=False, cast=bool)
+
+SECRET_KEY = config("SECRET_KEY")
+
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1"
+).split(",")
+
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL')
+    "default": dj_database_url.config(
+        default=config("DATABASE_URL")
     )
 }
 
