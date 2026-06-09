@@ -1,16 +1,28 @@
 # E-commerce API (Django + DRF)
 
+🌐 Live API:
+https://django-ecommerce-api-gugt.onrender.com
+
+
 ![Django](https://img.shields.io/badge/Django-DRF-green)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue)
 ![Python](https://img.shields.io/badge/Python-3.12-yellow)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-production-brightgreen)
+![Render](https://img.shields.io/badge/deployed-render-blue)
+
 
 A scalable e-commerce REST API built with Django, DRF, and PostgreSQL.
 
-Built with Django and Django REST Framework.
+
 
 ---
+
+## 📌 Overview
+
+The API supports full e-commerce workflow from authentication to order lifecycle management.
+This project is a production-ready REST API deployed on Render using Docker and PostgreSQL.
+
 
 ## Features
 
@@ -30,17 +42,29 @@ Built with Django and Django REST Framework.
 
 ## Tech Stack
 
-* Python
-* Django
-* Django REST Framework
-* PostgreSQL
-* Djoser
-* SimpleJWT
+- Python 3.12
+- Django
+- Django REST Framework
+- PostgreSQL
+- Docker
 
 ---
+## 📦 Architecture
 
+Monolithic Django REST API containerized with Docker and deployed on Render.
+----
+
+## 🔐 Security
+
+- JWT authentication
+- Permission-based access control
+- Environment variables for sensitive data
+
+
+
+---
 ## Run with Docker Compose
-
+This setup works in both local and production environments.
 ### Build and start containers
 ```bash
 docker compose up -d --build
@@ -73,7 +97,9 @@ docker compose up -d --build
 ### Swagger Docs
 
 ```text
-Swagger Docs: http://localhost:8000/api/docs/
+Swagger Docs:
+- Local: http://localhost:8000/api/docs/
+- Production: https://django-ecommerce-api-gugt.onrender.com/api/docs/
 ```
 
 ## API Structure
@@ -197,6 +223,13 @@ python manage.py test
 * Real payment integration (Stripe)
 * Add Redis caching
 * Add CI/CD pipeline
+
+## 🚀 Deployment
+
+- Platform: Render
+- Containerized: Docker
+- Database: PostgreSQL
+
 
 ## API Documentation
 
