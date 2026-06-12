@@ -29,7 +29,7 @@ class CartSerializer(serializers.ModelSerializer):
     
     def get_total_price(self, obj):
         total = sum(
-        (item.product.price * item.quantity for item in obj.items.all()),
-        Decimal('0.00') 
-         )
+        (item.price * item.quantity for item in obj.items.all()),
+        Decimal('0.00')
+    )
         return str(total.quantize(Decimal('0.01')))
