@@ -167,3 +167,15 @@ class ProductTests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         self.assertTrue(Product.objects.filter(name="MacBook Pro").exists())
+    def test_category_slug_is_generated_automatically(self):
+        category = Category.objects.create(name="Home Appliances")
+
+        self.assertEqual(category.slug, "home-appliances")
+
+
+    def test_category_slug_is_unique_when_name_repeats(self):
+        first_category = Category.objects.create(name="Accessories")
+        second_category = Category.objects.create(name="Accessories")
+
+        self.assertEqual(first_category.slug, "accessories")
+        self.assertEqual(second_category.slug, "accessories-1")

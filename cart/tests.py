@@ -231,3 +231,20 @@ class CartTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(CartItem.objects.count(), 0)
         self.assertEqual(response.data["detail"], "Cart cleared successfully")
+    
+
+    def test_cart_total_uses_cart_item_snapshot_price(self):
+        CartItem.objects.create(
+        cart=self.cart,
+        product=self.product,
+        quantity=2,
+        price=Decimal("80.00")
+    )
+
+        self.product.price = Decimal("120.00")
+        self.product.save()
+
+        response = self.client.get("/api/v1/cart/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["total_price"], "160.00")
