@@ -1,10 +1,17 @@
-FROM python:3.12
+FROM python:3.12-slim
 
-COPY requirements.txt . 
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-RUN pip install -r requirements.txt
+WORKDIR /app
 
+COPY requirements.txt .
 
-COPY . . 
+RUN pip install --upgrade pip && 
+pip install --no-cache-dir -r requirements.txt
 
-CMD sh -c "python manage.py migrate && gunicorn E_commerce.wsgi:application --bind 0.0.0.0:8000"
+COPY . .
+
+EXPOSE 8000
+
+CMD ["sh", "-c", "python manage.py migrate && gunicorn E_commerce.wsgi:application --bind 0.0.0.0:8000"]
