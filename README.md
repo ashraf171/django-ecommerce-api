@@ -1,42 +1,16 @@
 # E-commerce API (Django + DRF)
 
-🌐 Live API:
-https://django-ecommerce-api-gugt.onrender.com
+Backend-focused e-commerce REST API built with Django REST Framework, PostgreSQL, Docker, JWT authentication, Swagger documentation, automated tests, optimized queries, and transaction-safe checkout logic.
 
+## Highlights
 
-![Django](https://img.shields.io/badge/Django-DRF-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-blue)
-![Python](https://img.shields.io/badge/Python-3.12-yellow)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Status](https://img.shields.io/badge/status-production-brightgreen)
-![Render](https://img.shields.io/badge/deployed-render-blue)
-
-
-A scalable e-commerce REST API built with Django, DRF, and PostgreSQL.
-
-
-
----
-
-## 📌 Overview
-
-The API supports full e-commerce workflow from authentication to order lifecycle management.
-This project is a production-ready REST API deployed on Render using Docker and PostgreSQL.
-
-
-## Features
-
-* JWT authentication (SimpleJWT)
-* User management using Djoser
-* Product and category management
-* Cart system (add, update, delete, clear)
-* Checkout process with stock validation
-* Order system with status management
-* Cancel order with stock restoration
-* Filtering, search, and ordering
-* Fake payment endpoint for simulating order payment
-* Permission handling (user vs admin)
-* Automated tests (25 tests)
+- JWT authentication with SimpleJWT and Djoser
+- Product, category, cart, checkout, orders, and fake payment flow
+- Transaction-safe checkout using `transaction.atomic()`, `select_for_update()`, `F()` expressions, and `bulk_create()`
+- Query optimization using `select_related()` and `prefetch_related()`
+- PostgreSQL + Docker Compose setup
+- Swagger / OpenAPI documentation with drf-spectacular
+- Automated tests for cart, checkout, permissions, filtering, payment, and order status transitions
 
 ---
 
@@ -46,157 +20,276 @@ This project is a production-ready REST API deployed on Render using Docker and 
 - Django
 - Django REST Framework
 - PostgreSQL
-- Docker
+- Docker / Docker Compose
+- SimpleJWT
+- Djoser
+- drf-spectacular
+- django-filter
+- Gunicorn
+- Render
 
 ---
-## 📦 Architecture
 
-Monolithic Django REST API containerized with Docker and deployed on Render.
-----
+## Core Features
 
-## 🔐 Security
+### Authentication & Users
 
-- JWT authentication
-- Permission-based access control
-- Environment variables for sensitive data
+- User registration and login
+- JWT access and refresh tokens
+- Authenticated user profile endpoint
 
+### Products & Categories
 
+- Public product and category listing
+- Admin-only create, update, and delete operations
+- Product filtering, searching, ordering, and pagination
+- Product image and thumbnail support
+
+### Cart & Checkout
+
+- Add, update, remove, and clear cart items
+- Stock validation before checkout
+- Transaction-safe checkout process
+- Stock updates handled at the database level
+- Order item snapshots for price and product name
+
+### Orders & Payment Simulation
+
+- Authenticated users can view their own orders
+- Admin users can manage order status
+- Fake payment endpoint for simulating successful payment
+- Controlled order status transitions
 
 ---
-## Run with Docker Compose
-This setup works in both local and production environments.
-### Build and start containers
-```bash
-docker compose up -d --build
-```
-### Apply database migrations
-```bash
-docker exec -it django-api python manage.py migrate
-```
 
-### Create superuser
-```bash
-docker exec -it django-api python manage.py createsuperuser
-```
-### Check running containers
-```bash
-docker ps
-```
-### Stop containers
-```bash
-docker compose down
-```
-### Stop and remove volumes (reset database)
-```bash
-docker compose down -v
-```
-### Rebuild project from scratch
-```bash
-docker compose up -d --build
-```
-### Swagger Docs
+## Key Technical Decisions
+
+### Transaction-safe checkout
+
+The checkout flow uses:
+
+- `transaction.atomic()` to keep checkout operations inside one database transaction
+- `select_for_update()` to lock cart items and products during checkout
+- `F()` expressions to update stock safely at the database level
+- `bulk_create()` to create order items efficiently
+
+This reduces inconsistent stock and order data during checkout.
+
+### Query optimization
+
+The project uses:
+
+- `select_related('category')` for product-category queries
+- `prefetch_related('items__product')` for cart items
+- `prefetch_related('order_items')` for orders
+- Pagination for list endpoints
+- Database indexes on frequently queried fields
+
+---
+
+## API Documentation
+
+Swagger UI is available locally after running the project:
 
 ```text
-Swagger Docs:
-- Local: http://localhost:8000/api/docs/
-- Production: https://django-ecommerce-api-gugt.onrender.com/api/docs/
+http://127.0.0.1:8000/api/docs/
 ```
 
-## API Structure
+OpenAPI schema:
+
+```text
+http://127.0.0.1:8000/api/schema/
+```
+
+If a live deployment is available, it may be hosted on a free-tier service and can take time to wake up.
+
+---
+
+## Main API Endpoints
 
 ### Authentication
 
-* POST `/api/v1/auth/users/` – register
-* POST `/api/v1/auth/jwt/create/` – login
-* POST `/api/v1/auth/jwt/refresh/` – refresh token
-* GET `/api/v1/auth/users/me/` – current user
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/auth/users/` | Register user |
+| POST | `/api/v1/auth/jwt/create/` | Login and get JWT tokens |
+| POST | `/api/v1/auth/jwt/refresh/` | Refresh JWT token |
+| GET | `/api/v1/auth/users/me/` | Get current user |
 
----
+### User Profile
 
-### Profile
-
-* GET `/api/v1/users/profile/`
-* PUT `/api/v1/users/profile/`
-
----
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/users/profile/` | Get profile |
+| PUT | `/api/v1/users/profile/` | Update profile |
 
 ### Products
 
-* GET `/api/v1/products/`
+Current product routes are nested under `/api/v1/products/product/`.
 
-Supports:
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/products/product/` | List products |
+| GET | `/api/v1/products/product/{id}/` | Retrieve product |
+| POST | `/api/v1/products/product/` | Create product — admin only |
+| PATCH | `/api/v1/products/product/{id}/` | Update product — admin only |
+| DELETE | `/api/v1/products/product/{id}/` | Delete product — admin only |
 
-* search: `?search=iphone`
-* filtering: `?min_price=100&max_price=500`
-* category: `?category=electronics`
-* ordering: `?ordering=-price`
+Example query parameters:
 
----
+```text
+/api/v1/products/product/?search=iphone
+/api/v1/products/product/?min_price=100&max_price=500
+/api/v1/products/product/?category=electronics
+/api/v1/products/product/?ordering=-price
+```
+
+### Categories
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/products/categories/` | List categories |
+| POST | `/api/v1/products/categories/` | Create category — admin only |
 
 ### Cart
 
-* GET `/api/v1/cart/`
-* POST `/api/v1/cart/items/`
-* PUT `/api/v1/cart/items/`
-* DELETE `/api/v1/cart/items/`
-* POST `/api/v1/cart/clear/`
+All cart endpoints require authentication.
 
----
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/v1/cart/` | Get current user's cart |
+| POST | `/api/v1/cart/item/` | Add item to cart |
+| PUT | `/api/v1/cart/item/` | Update item quantity |
+| DELETE | `/api/v1/cart/item/` | Remove item from cart |
+| POST | `/api/v1/cart/clear/` | Clear cart |
+
+Example add/update item request:
+
+```json
+{
+  "product_id": 1,
+  "quantity": 2
+}
+```
+
 ### Orders
 
-- GET `/api/v1/orders/`
-- GET `/api/v1/orders/{id}/`
-- POST `/api/v1/orders/{id}/pay/`
-- PATCH `/api/v1/orders/{id}/change_status/`
+All order endpoints require authentication.
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/v1/orders/checkout/` | Create order from cart |
+| GET | `/api/v1/orders/` | List user orders |
+| GET | `/api/v1/orders/{id}/` | Retrieve order |
+| POST | `/api/v1/orders/{id}/pay/` | Simulate payment |
+| PATCH | `/api/v1/orders/{id}/change_status/` | Change order status — admin only |
+
 ---
 
 ## Order Status Flow
 
-Valid transitions:
+Allowed transitions:
 
-```
+```text
 PENDING → PAID → SHIPPED → DELIVERED
 PENDING → CANCELED
 PAID → CANCELED
+FAILED → PENDING
 ```
 
-Invalid transitions are blocked.
+Invalid transitions are blocked by the API.
 
 ---
 
-### Payment Flow
+## Run with Docker Compose
 
-- Orders are created with `PENDING` status.
-- A pending order can be paid using:
-- POST `/api/v1/orders/{id}/pay/`
-- After successful payment, the order status becomes `PAID`.
-- Paid orders can then be shipped by admin.
-
-## Quick Start
-
-### Installation
+### 1. Clone the repository
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/ashraf171/django-ecommerce-api.git
 cd django-ecommerce-api
+```
+
+### 2. Create `.env`
+
+Create a `.env` file in the project root:
+
+```env
+SECRET_KEY=your-secret-key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+
+POSTGRES_DB=ecommerce_db
+POSTGRES_USER=ecommerce_user
+POSTGRES_PASSWORD=ecommerce_password
+
+DATABASE_URL=postgres://ecommerce_user:ecommerce_password@db:5432/ecommerce_db
+```
+
+### 3. Build and run
+
+```bash
+docker compose up -d --build
+```
+
+### 4. Create a superuser
+
+```bash
+docker exec -it django-api python manage.py createsuperuser
+```
+
+### 5. Open Swagger docs
+
+```text
+http://localhost:8000/api/docs/
+```
+
+### 6. Stop containers
+
+```bash
+docker compose down
+```
+
+---
+
+## Run Locally Without Docker
+
+### 1. Create and activate virtual environment
+
+Windows:
+
+```bash
 python -m venv venv
 venv\Scripts\activate
+```
+
+Linux / macOS:
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 2. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
----
+### 3. Create `.env`
 
-## Database
+```env
+SECRET_KEY=your-secret-key
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+DATABASE_URL=sqlite:///db.sqlite3
+```
+
+### 4. Apply migrations and run server
 
 ```bash
 python manage.py migrate
-```
-
----
-
-## Run Server
-
-```bash
+python manage.py createsuperuser
 python manage.py runserver
 ```
 
@@ -210,29 +303,62 @@ python manage.py test
 
 ---
 
-## Notes
+## Project Structure
 
-* Checkout is wrapped in database transactions to avoid inconsistent data
-* Stock updates are handled safely to prevent race conditions
-* Permissions are enforced so users can only access their own data
+```text
+django-ecommerce-api/
+├── E_commerce/          # Django project settings and root URLs
+├── users/               # Custom user profile API
+├── product/             # Product and category APIs
+├── cart/                # Cart models, serializers, views, and checkout service
+├── orders/              # Orders, order items, status flow, and payment simulation
+├── screenshots/         # API screenshots
+├── Dockerfile
+├── docker-compose.yml
+├── build.sh
+├── manage.py
+├── requirements.txt
+└── README.md
+```
+
+---
+
+## Screenshots
+
+Swagger documentation screenshot:
+
+```text
+screenshots/swagger.png
+```
+
+---
+
+## Known Notes
+
+- Payment is simulated and does not integrate with a real payment provider.
+- Product media files use local/container storage.
+- Free-tier deployments may sleep or return temporary service errors.
+- This project is a backend portfolio project with production-aware patterns, not a full commercial e-commerce platform.
 
 ---
 
 ## Future Improvements
 
-* Real payment integration (Stripe)
-* Add Redis caching
-* Add CI/CD pipeline
+- Add GitHub Actions for automated test runs
+- Add API throttling and rate limiting
+- Improve production static/media file handling
+- Add structured logging
+- Add Redis and Celery for background jobs
+- Add real payment provider integration
+- Add more tests for authentication and profile endpoints
+- Improve category slug handling
 
-## 🚀 Deployment
+---
 
-- Platform: Render
-- Containerized: Docker
-- Database: PostgreSQL
+## Author
 
+Ashraf Almouaie
 
-## API Documentation
-
-Swagger UI:
-
-![Swagger Screenshot](screenshots/swagger.png)
+- GitHub: https://github.com/ashraf171
+- LinkedIn: https://www.linkedin.com/in/ashraf-almouaie-77b3823bb/
+- Email: ashrafalmouie@gmail.com
