@@ -191,10 +191,10 @@ All order endpoints require authentication.
 Allowed transitions:
 
 ```text
-PENDING → PAID → SHIPPED → DELIVERED
-PENDING → CANCELED
-PAID → CANCELED
-FAILED → PENDING
+PENDING -> PAID -> SHIPPED -> DELIVERED
+PENDING -> CANCELED
+PAID -> CANCELED
+FAILED -> PENDING
 ```
 
 Invalid transitions are blocked by the API.
