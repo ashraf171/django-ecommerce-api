@@ -18,6 +18,20 @@ class Category(models.Model):
 
     def get_absolute_url(self):
         return f"/{self.slug}/"
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+          base_slug = slugify(self.name) or str(uuid.uuid4())[:8]
+          unique_slug = base_slug
+          counter = 1
+
+          while Category.objects.filter(slug=unique_slug).exclude(pk=self.pk).exists():
+              unique_slug = f"{base_slug}-{counter}"
+              counter += 1
+
+          self.slug = unique_slug
+
+        super().save(*args, **kwargs)
 
 
 class Product(models.Model):
