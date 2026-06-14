@@ -86,25 +86,31 @@ The project uses:
 - Database indexes on frequently queried fields
 
 ---
-
 ## API Documentation
 
-Swagger UI is available locally after running the project:
+Swagger UI is available here:
 
 ```text
+Live:
+https://django-ecommerce-api-gugt.onrender.com/api/docs/
+
+Local:
 http://127.0.0.1:8000/api/docs/
 ```
 
 OpenAPI schema:
 
 ```text
+Live:
+https://django-ecommerce-api-gugt.onrender.com/api/schema/
+
+Local:
 http://127.0.0.1:8000/api/schema/
 ```
 
-If a live deployment is available, it may be hosted on a free-tier service and can take time to wake up.
+> Note: The live deployment is hosted on Render. It may take a few seconds to wake up if inactive.
 
 ---
-
 ## Main API Endpoints
 
 ### Authentication
