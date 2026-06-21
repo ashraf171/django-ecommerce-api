@@ -45,6 +45,48 @@ class CartTests(TestCase):
 
         self.cart, _ = Cart.objects.get_or_create(user=self.user)
 
+
+
+    def test_unauthenticated_user_cannot_view_cart(self):
+        client = APIClient()
+
+        response = client.get("/api/v1/cart/")
+
+        self.assertEqual(response.status_code, 401)
+
+
+    def test_unauthenticated_user_cannot_add_item_to_cart(self):
+        client = APIClient()
+
+        response = client.post(
+        "/api/v1/cart/item/",
+        {
+            "product_id": self.product.id,
+            "quantity": 1,
+        },
+        format="json",
+        )
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(CartItem.objects.count(), 0)
+
+
+    def test_add_item_with_invalid_product_id_returns_404(self):
+        response = self.client.post(
+        "/api/v1/cart/item/",
+        {
+            "product_id": 99999,
+            "quantity": 1,
+        },
+        format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(CartItem.objects.count(), 0)
+        self.assertEqual(response.data["detail"], "Product Not Found")
+
+
+
     def test_add_item_to_cart(self):
         response = self.client.post(
             "/api/v1/cart/item/",
@@ -64,6 +106,7 @@ class CartTests(TestCase):
         self.assertEqual(cart_item.product, self.product)
         self.assertEqual(cart_item.quantity, 2)
         self.assertEqual(cart_item.price, self.product.price)
+
 
     def test_add_same_item_increases_quantity(self):
         CartItem.objects.create(
