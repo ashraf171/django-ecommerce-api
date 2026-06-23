@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
-
+from django.core.cache import cache
 from product.models import Category, Product
 
 
@@ -13,6 +13,7 @@ User = get_user_model()
 
 class ProductTests(TestCase):
     def setUp(self):
+        cache.clear()
         self.user = User.objects.create_user(
             username="normaluser",
             email="user@example.com",
@@ -70,6 +71,55 @@ class ProductTests(TestCase):
             return data["results"]
 
         return data
+    
+
+    def test_product_list_cache_is_invalidated_when_admin_creates_product(self):
+        first_response = self.client.get(self.products_url)
+        self.assertEqual(first_response["X-Cache"], "MISS")
+
+        second_response = self.client.get(self.products_url)
+        self.assertEqual(second_response["X-Cache"], "HIT")
+
+        self.client.force_authenticate(user=self.admin)
+
+        create_response = self.client.post(
+        self.products_url,
+        {
+            "category": self.electronics.id,
+            "name": "MacBook Pro",
+            "description": "Apple laptop",
+            "price": "2000.00",
+            "in_stock": 5
+        },
+        format="json"
+        )
+
+        self.assertEqual(create_response.status_code, 201)
+
+        response_after_create = self.client.get(self.products_url)
+
+        self.assertEqual(response_after_create.status_code, 200)
+        self.assertEqual(response_after_create["X-Cache"], "MISS")
+
+        results = self.get_results(response_after_create)
+        names = [item["name"] for item in results]
+
+        self.assertIn("MacBook Pro", names)
+
+
+
+    def test_product_list_response_is_cached_after_first_request(self):
+        first_response = self.client.get(self.products_url)
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(first_response["X-Cache"], "MISS")
+
+        second_response = self.client.get(self.products_url)
+
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(second_response["X-Cache"], "HIT")
+
+
 
     def test_search_products_by_name(self):
         response = self.client.get(self.products_url, {"search": "iphone"})
@@ -80,6 +130,62 @@ class ProductTests(TestCase):
         names = [item["name"] for item in results]
 
         self.assertIn("iPhone 15", names)
+    
+    def test_product_list_cache_is_invalidated_when_admin_updates_product(self):
+        first_response = self.client.get(self.products_url)
+        self.assertEqual(first_response["X-Cache"], "MISS")
+
+        second_response = self.client.get(self.products_url)
+        self.assertEqual(second_response["X-Cache"], "HIT")
+
+        self.client.force_authenticate(user=self.admin)
+
+        product_detail_url = reverse("product-detail", args=[self.iphone.id])
+
+        update_response = self.client.patch(
+        product_detail_url,
+        {
+            "price": "1200.00"
+        },
+        format="json"
+        )
+
+        self.assertEqual(update_response.status_code, 200)
+
+        self.iphone.refresh_from_db()
+        self.assertEqual(self.iphone.price, Decimal("1200.00"))
+
+        response_after_update = self.client.get(self.products_url)
+
+        self.assertEqual(response_after_update.status_code, 200)
+        self.assertEqual(response_after_update["X-Cache"], "MISS")
+
+
+    def test_product_list_cache_is_invalidated_when_admin_deletes_product(self):
+        first_response = self.client.get(self.products_url)
+        self.assertEqual(first_response["X-Cache"], "MISS")
+
+        second_response = self.client.get(self.products_url)
+        self.assertEqual(second_response["X-Cache"], "HIT")
+
+        self.client.force_authenticate(user=self.admin)
+
+        product_detail_url = reverse("product-detail", args=[self.samsung.id])
+
+        delete_response = self.client.delete(product_detail_url)
+
+        self.assertEqual(delete_response.status_code, 204)
+
+        response_after_delete = self.client.get(self.products_url)
+
+        self.assertEqual(response_after_delete.status_code, 200)
+        self.assertEqual(response_after_delete["X-Cache"], "MISS")
+
+        results = self.get_results(response_after_delete)
+        names = [item["name"] for item in results]
+
+        self.assertNotIn("Samsung S24", names)
+
 
     def test_filter_products_by_min_price(self):
         response = self.client.get(self.products_url, {"min_price": 500})
