@@ -493,5 +493,5 @@ screenshots/swagger.png
 Ashraf Almouaie
 
 * GitHub: https://github.com/ashraf171
-* LinkedIn: https://www.linkedin.com/in/ashraf-almouaie-77b3823bb/
+* LinkedIn: https://www.linkedin.com/in/ashraf-almouaie/
 * Email: [ashrafalmouie@gmail.com](mailto:ashrafalmouie@gmail.com)
