@@ -14,6 +14,12 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis-cache
+    ports:
+      - "6379:6379"
+
   web:
     build: .
     container_name: django-api
@@ -24,14 +30,20 @@ services:
     depends_on:
       db:
         condition: service_healthy
-  
+      redis:
+        condition: service_started
 
-  redis:
-    image: redis:7-alpine
-    container_name: redis-cache
-    ports:
-      - "6379:6379"
+  celery:
+    build: .
+    container_name: celery-worker
+    command: celery -A E_commerce worker -l info
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
 volumes:
   pgdata:
-  
