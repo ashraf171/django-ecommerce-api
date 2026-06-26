@@ -1,178 +1,176 @@
-# E-commerce API (Django + DRF)
+# E-commerce REST API
 
-Backend-focused e-commerce REST API built with Django REST Framework, PostgreSQL, Redis, Docker, JWT authentication, Swagger/OpenAPI documentation, GitHub Actions CI, automated tests, optimized queries, Redis caching, and transaction-safe checkout logic.
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![Django](https://img.shields.io/badge/Django-REST%20Framework-green)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-blue)
+![Redis](https://img.shields.io/badge/Redis-Cache%20%2F%20Broker-red)
+![Celery](https://img.shields.io/badge/Celery-Background%20Tasks-green)
+![Docker](https://img.shields.io/badge/Docker-Compose-blue)
+![CI](https://img.shields.io/badge/GitHub%20Actions-CI-blue)
+
+A backend-focused e-commerce API built with Django REST Framework.
+
+The project covers product management, cart and checkout workflows, order processing, simulated payments, Redis caching, Celery background tasks, API rate limiting, Docker-based development, Swagger documentation, and automated tests.
 
 ---
 
-## Highlights
+## Live API
 
-* JWT authentication with SimpleJWT and Djoser
-* Product, category, cart, checkout, orders, and fake payment flow
-* Transaction-safe checkout using `transaction.atomic()`, `select_for_update()`, `F()` expressions, and `bulk_create()`
-* Query optimization using `select_related()` and `prefetch_related()`
-* Redis caching for product list API responses
-* Cache invalidation when products are created, updated, or deleted
-* PostgreSQL + Redis + Docker Compose setup
-* Swagger / OpenAPI documentation with drf-spectacular
-* GitHub Actions CI for automated test runs
-* Automated tests for cart, checkout, permissions, filtering, payment, order status transitions, and Redis cache behavior
+| Resource       | Link                                                       |
+| -------------- | ---------------------------------------------------------- |
+| Swagger UI     | https://django-ecommerce-api-gugt.onrender.com/api/docs/   |
+| OpenAPI Schema | https://django-ecommerce-api-gugt.onrender.com/api/schema/ |
+
+> The live deployment is hosted on Render. It may take a few seconds to wake up if inactive.
+
+---
+
+## Table of Contents
+
+* [Features](#features)
+* [Tech Stack](#tech-stack)
+* [Architecture](#architecture)
+* [API Endpoints](#api-endpoints)
+* [Technical Highlights](#technical-highlights)
+* [Run with Docker Compose](#run-with-docker-compose)
+* [Run Locally](#run-locally)
+* [Environment Variables](#environment-variables)
+* [Tests](#tests)
+* [CI](#ci)
+* [Project Structure](#project-structure)
+* [Known Notes](#known-notes)
+* [Future Improvements](#future-improvements)
+
+---
+
+## Features
+
+### Authentication
+
+* User registration with Djoser
+* JWT authentication with SimpleJWT
+* Access and refresh token flow
+* Authenticated user profile endpoint
+* Rate-limited login endpoint
+
+### Products and Categories
+
+* Public product and category listing
+* Product detail endpoint
+* Admin-only create, update, and delete operations
+* Filtering, searching, ordering, and pagination
+* Product image and thumbnail support
+* Redis caching for product list responses
+* Cache invalidation on product create, update, and delete
+
+### Cart and Checkout
+
+* Add, update, remove, and clear cart items
+* Stock validation before checkout
+* Transaction-safe checkout flow
+* Database-level stock updates
+* Order item snapshots for product name and price
+* Rate-limited checkout endpoint
+* Background order confirmation placeholder task after successful checkout
+
+### Orders and Payments
+
+* Authenticated users can view their own orders
+* Admin users can manage order status
+* Simulated payment endpoint
+* Controlled order status transitions
+* Invalid status transitions are rejected
+
+### Background Processing
+
+* Celery configured for background tasks
+* Redis used as the Celery broker
+* Separate Celery worker service in Docker Compose
+* Checkout triggers an asynchronous confirmation placeholder task after the database transaction commits
 
 ---
 
 ## Tech Stack
 
-* Python 3.12
-* Django
-* Django REST Framework
-* PostgreSQL
-* Redis
-* Docker / Docker Compose
-* SimpleJWT
-* Djoser
-* drf-spectacular
-* django-filter
-* django-redis
-* Gunicorn
-* GitHub Actions
-* Render
+| Area              | Technology                    |
+| ----------------- | ----------------------------- |
+| Language          | Python 3.12                   |
+| Framework         | Django, Django REST Framework |
+| Database          | PostgreSQL                    |
+| Cache             | Redis                         |
+| Background Jobs   | Celery                        |
+| Authentication    | SimpleJWT, Djoser             |
+| API Documentation | drf-spectacular, Swagger UI   |
+| Filtering         | django-filter                 |
+| Containerization  | Docker, Docker Compose        |
+| CI                | GitHub Actions                |
+| Deployment        | Render                        |
+| Production Server | Gunicorn                      |
 
 ---
 
-## Core Features
-
-### Authentication & Users
-
-* User registration and login
-* JWT access and refresh tokens
-* Authenticated user profile endpoint
-
-### Products & Categories
-
-* Public product and category listing
-* Admin-only create, update, and delete operations
-* Product filtering, searching, ordering, and pagination
-* Product image and thumbnail support
-* Redis caching for product list responses
-* Cache invalidation on product create, update, and delete
-
-### Cart & Checkout
-
-* Add, update, remove, and clear cart items
-* Stock validation before checkout
-* Transaction-safe checkout process
-* Stock updates handled at the database level
-* Order item snapshots for price and product name
-
-### Orders & Payment Simulation
-
-* Authenticated users can view their own orders
-* Admin users can manage order status
-* Fake payment endpoint for simulating successful payment
-* Controlled order status transitions
-
----
-
-## Key Technical Decisions
-
-### Transaction-safe Checkout
-
-The checkout flow uses:
-
-* `transaction.atomic()` to keep checkout operations inside one database transaction
-* `select_for_update()` to lock cart items and products during checkout
-* `F()` expressions to update stock safely at the database level
-* `bulk_create()` to create order items efficiently
-
-This reduces inconsistent stock and order data during checkout.
-
-### Query Optimization
-
-The project uses:
-
-* `select_related('category')` for product-category queries
-* `prefetch_related('items__product')` for cart items
-* `prefetch_related('order_items')` for orders
-* Pagination for list endpoints
-* Database indexes on frequently queried fields
-
-### Redis Product List Caching
-
-The product list endpoint uses Django's cache framework with Redis as the cache backend when `REDIS_URL` is available.
-
-The product list response is cached to reduce repeated database queries and improve API response performance for frequently requested product listing pages.
-
-The cache key is based on the full request path, so different query parameters generate different cache entries.
-
-Examples:
+## Architecture
 
 ```text
-/api/v1/products/product/
-/api/v1/products/product/?search=iphone
-/api/v1/products/product/?category=electronics
-/api/v1/products/product/?ordering=-price
+Client / Swagger / API Consumer
+        |
+        v
+Django REST Framework API
+        |
+        |---- PostgreSQL
+        |       users, products, carts, orders, stock
+        |
+        |---- Redis Cache
+        |       product list response caching
+        |
+        |---- Redis Broker
+                Celery task queue
+                        |
+                        v
+                 Celery Worker
+                 background task execution
 ```
 
-Cache invalidation is handled when products are created, updated, or deleted. The implementation uses cache versioning, so stale cached product lists are avoided after product data changes.
+### Docker Services
 
-The project falls back to Django's local memory cache when `REDIS_URL` is not provided. This keeps the test and CI environment simple while still allowing Redis caching in Docker/local environments.
+| Service  | Purpose                       |
+| -------- | ----------------------------- |
+| `web`    | Django REST API               |
+| `db`     | PostgreSQL database           |
+| `redis`  | Redis cache and Celery broker |
+| `celery` | Celery background worker      |
 
 ---
 
-## API Documentation
-
-Swagger UI is available here:
-
-```text
-Live:
-https://django-ecommerce-api-gugt.onrender.com/api/docs/
-
-Local:
-http://127.0.0.1:8000/api/docs/
-```
-
-OpenAPI schema:
-
-```text
-Live:
-https://django-ecommerce-api-gugt.onrender.com/api/schema/
-
-Local:
-http://127.0.0.1:8000/api/schema/
-```
-
-> Note: The live deployment is hosted on Render. It may take a few seconds to wake up if inactive.
-
----
-
-## Main API Endpoints
+## API Endpoints
 
 ### Authentication
 
-| Method | Endpoint                    | Description              |
-| ------ | --------------------------- | ------------------------ |
-| POST   | `/api/v1/auth/users/`       | Register user            |
-| POST   | `/api/v1/auth/jwt/create/`  | Login and get JWT tokens |
-| POST   | `/api/v1/auth/jwt/refresh/` | Refresh JWT token        |
-| GET    | `/api/v1/auth/users/me/`    | Get current user         |
+| Method | Endpoint                    | Description                    |
+| ------ | --------------------------- | ------------------------------ |
+| `POST` | `/api/v1/auth/users/`       | Register user                  |
+| `POST` | `/api/v1/auth/jwt/create/`  | Login and get JWT tokens       |
+| `POST` | `/api/v1/auth/jwt/refresh/` | Refresh JWT token              |
+| `GET`  | `/api/v1/auth/users/me/`    | Get current authenticated user |
 
 ### User Profile
 
 | Method | Endpoint                 | Description    |
 | ------ | ------------------------ | -------------- |
-| GET    | `/api/v1/users/profile/` | Get profile    |
-| PUT    | `/api/v1/users/profile/` | Update profile |
+| `GET`  | `/api/v1/users/profile/` | Get profile    |
+| `PUT`  | `/api/v1/users/profile/` | Update profile |
 
 ### Products
 
-Current product routes are nested under `/api/v1/products/product/`.
+Product routes are currently nested under `/api/v1/products/product/`.
 
-| Method | Endpoint                         | Description                 |
-| ------ | -------------------------------- | --------------------------- |
-| GET    | `/api/v1/products/product/`      | List products               |
-| GET    | `/api/v1/products/product/{id}/` | Retrieve product            |
-| POST   | `/api/v1/products/product/`      | Create product — admin only |
-| PATCH  | `/api/v1/products/product/{id}/` | Update product — admin only |
-| DELETE | `/api/v1/products/product/{id}/` | Delete product — admin only |
+| Method   | Endpoint                         | Description                 |
+| -------- | -------------------------------- | --------------------------- |
+| `GET`    | `/api/v1/products/product/`      | List products               |
+| `GET`    | `/api/v1/products/product/{id}/` | Retrieve product            |
+| `POST`   | `/api/v1/products/product/`      | Create product — admin only |
+| `PATCH`  | `/api/v1/products/product/{id}/` | Update product — admin only |
+| `DELETE` | `/api/v1/products/product/{id}/` | Delete product — admin only |
 
 Example query parameters:
 
@@ -187,22 +185,22 @@ Example query parameters:
 
 | Method | Endpoint                       | Description                  |
 | ------ | ------------------------------ | ---------------------------- |
-| GET    | `/api/v1/products/categories/` | List categories              |
-| POST   | `/api/v1/products/categories/` | Create category — admin only |
+| `GET`  | `/api/v1/products/categories/` | List categories              |
+| `POST` | `/api/v1/products/categories/` | Create category — admin only |
 
 ### Cart
 
 All cart endpoints require authentication.
 
-| Method | Endpoint              | Description             |
-| ------ | --------------------- | ----------------------- |
-| GET    | `/api/v1/cart/`       | Get current user's cart |
-| POST   | `/api/v1/cart/item/`  | Add item to cart        |
-| PUT    | `/api/v1/cart/item/`  | Update item quantity    |
-| DELETE | `/api/v1/cart/item/`  | Remove item from cart   |
-| POST   | `/api/v1/cart/clear/` | Clear cart              |
+| Method   | Endpoint              | Description             |
+| -------- | --------------------- | ----------------------- |
+| `GET`    | `/api/v1/cart/`       | Get current user's cart |
+| `POST`   | `/api/v1/cart/item/`  | Add item to cart        |
+| `PUT`    | `/api/v1/cart/item/`  | Update item quantity    |
+| `DELETE` | `/api/v1/cart/item/`  | Remove item from cart   |
+| `POST`   | `/api/v1/cart/clear/` | Clear cart              |
 
-Example add/update item request:
+Example request:
 
 ```json
 {
@@ -215,13 +213,99 @@ Example add/update item request:
 
 All order endpoints require authentication.
 
-| Method | Endpoint                             | Description                      |
-| ------ | ------------------------------------ | -------------------------------- |
-| POST   | `/api/v1/orders/checkout/`           | Create order from cart           |
-| GET    | `/api/v1/orders/`                    | List user orders                 |
-| GET    | `/api/v1/orders/{id}/`               | Retrieve order                   |
-| POST   | `/api/v1/orders/{id}/pay/`           | Simulate payment                 |
-| PATCH  | `/api/v1/orders/{id}/change_status/` | Change order status — admin only |
+| Method  | Endpoint                             | Description                      |
+| ------- | ------------------------------------ | -------------------------------- |
+| `POST`  | `/api/v1/orders/checkout/`           | Create order from cart           |
+| `GET`   | `/api/v1/orders/`                    | List user orders                 |
+| `GET`   | `/api/v1/orders/{id}/`               | Retrieve order                   |
+| `POST`  | `/api/v1/orders/{id}/pay/`           | Simulate payment                 |
+| `PATCH` | `/api/v1/orders/{id}/change_status/` | Change order status — admin only |
+
+---
+
+## Technical Highlights
+
+### Transaction-safe Checkout
+
+Checkout is handled inside a database transaction to keep order creation, stock updates, and cart cleanup consistent.
+
+The checkout flow uses:
+
+* `transaction.atomic()`
+* `select_for_update()`
+* `F()` expressions
+* `bulk_create()`
+
+This helps prevent inconsistent stock and order data when multiple checkout requests happen at the same time.
+
+The core checkout logic remains synchronous because it directly affects critical data such as stock, orders, and cart items.
+
+---
+
+### Redis Product List Caching
+
+The product list endpoint uses Django's cache framework with Redis as the cache backend when `REDIS_URL` is available.
+
+The cache key is based on the full request path, so different filters and query parameters generate different cache entries.
+
+Examples:
+
+```text
+/api/v1/products/product/
+/api/v1/products/product/?search=iphone
+/api/v1/products/product/?category=electronics
+/api/v1/products/product/?ordering=-price
+```
+
+Cache invalidation is handled when products are created, updated, or deleted.
+
+The implementation uses cache versioning. When product data changes, the cache version is incremented, so old cached product list responses are ignored and fresh data is cached again.
+
+If `REDIS_URL` is not provided, the project falls back to Django's local memory cache. This keeps tests and CI simple while still supporting Redis in Docker and deployed environments.
+
+---
+
+### Celery Background Tasks
+
+Celery is used for non-critical background work.
+
+Redis is used as the Celery broker. Django sends task messages to Redis, and the Celery worker consumes and executes them separately from the request-response cycle.
+
+After a successful checkout, the application dispatches a background order confirmation placeholder task.
+
+The task is triggered with `transaction.on_commit()`, which ensures the task is only sent after the database transaction has been committed successfully.
+
+This avoids a common issue where a worker tries to read an order before it is fully saved.
+
+---
+
+### API Rate Limiting
+
+The project uses Django REST Framework throttling with `ScopedRateThrottle`.
+
+Configured scopes:
+
+| Scope          | Endpoint                    | Rate      |
+| -------------- | --------------------------- | --------- |
+| `login`        | `/api/v1/auth/jwt/create/`  | `5/min`   |
+| `checkout`     | `/api/v1/orders/checkout/`  | `10/min`  |
+| `product_list` | `/api/v1/products/product/` | `100/min` |
+
+This protects authentication, checkout, and product listing endpoints from excessive requests.
+
+---
+
+### Query Optimization
+
+The project uses:
+
+* `select_related('category')` for product-category queries
+* `prefetch_related('items__product')` for cart items
+* `prefetch_related('order_items')` for orders
+* Pagination for list endpoints
+* Database indexes on frequently queried fields
+
+These choices reduce unnecessary database queries and improve API performance on list and detail endpoints.
 
 ---
 
@@ -263,10 +347,14 @@ POSTGRES_USER=ecommerce_user
 POSTGRES_PASSWORD=ecommerce_password
 
 DATABASE_URL=postgres://ecommerce_user:ecommerce_password@db:5432/ecommerce_db
+
 REDIS_URL=redis://redis:6379/1
+
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
 ```
 
-### 3. Build and Run
+### 3. Build and Start Services
 
 ```bash
 docker compose up -d --build
@@ -276,23 +364,37 @@ This starts:
 
 * Django API
 * PostgreSQL database
-* Redis cache
+* Redis cache / Celery broker
+* Celery worker
 
-### 4. Check Running Containers
+### 4. Apply Migrations
+
+```bash
+docker compose exec web python manage.py migrate
+```
+
+### 5. Create a Superuser
+
+```bash
+docker compose exec web python manage.py createsuperuser
+```
+
+### 6. Check Containers
 
 ```bash
 docker ps
 ```
 
-Expected services:
+Expected containers:
 
 ```text
 django-api
 postgres-db
 redis-cache
+celery-worker
 ```
 
-### 5. Test Redis Connection
+### 7. Check Redis
 
 ```bash
 docker compose exec redis redis-cli ping
@@ -304,25 +406,25 @@ Expected output:
 PONG
 ```
 
-### 6. Apply Migrations
+### 8. Check Celery
 
 ```bash
-docker compose exec web python manage.py migrate
+docker compose logs celery
 ```
 
-### 7. Create a Superuser
+Expected worker status:
 
-```bash
-docker compose exec web python manage.py createsuperuser
+```text
+celery ready
 ```
 
-### 8. Open Swagger Docs
+### 9. Open API Documentation
 
 ```text
 http://localhost:8000/api/docs/
 ```
 
-### 9. Stop Containers
+### 10. Stop Services
 
 ```bash
 docker compose down
@@ -338,7 +440,7 @@ Use `down -v` carefully because it deletes database volume data.
 
 ---
 
-## Run Locally Without Docker
+## Run Locally
 
 ### 1. Create and Activate Virtual Environment
 
@@ -375,10 +477,12 @@ DATABASE_URL=sqlite:///db.sqlite3
 
 Redis is optional in this mode. If `REDIS_URL` is not provided, the project falls back to Django's local memory cache.
 
-If you want to use Redis locally outside Docker, run Redis on your machine and add:
+To use Redis locally, run Redis and add:
 
 ```env
 REDIS_URL=redis://localhost:6379/1
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
 ```
 
 ### 4. Apply Migrations and Run Server
@@ -389,9 +493,40 @@ python manage.py createsuperuser
 python manage.py runserver
 ```
 
+### 5. Run Celery Worker Locally
+
+If Redis is running locally and Celery environment variables are configured:
+
+```bash
+celery -A E_commerce worker -l info
+```
+
+On Windows:
+
+```bash
+celery -A E_commerce worker -l info --pool=solo
+```
+
 ---
 
-## Run Tests
+## Environment Variables
+
+| Variable                | Description               | Example                                   |
+| ----------------------- | ------------------------- | ----------------------------------------- |
+| `SECRET_KEY`            | Django secret key         | `your-secret-key`                         |
+| `DEBUG`                 | Django debug mode         | `True`                                    |
+| `ALLOWED_HOSTS`         | Allowed hosts             | `localhost,127.0.0.1`                     |
+| `DATABASE_URL`          | Database connection URL   | `postgres://user:password@db:5432/dbname` |
+| `REDIS_URL`             | Redis cache URL           | `redis://redis:6379/1`                    |
+| `CELERY_BROKER_URL`     | Celery broker URL         | `redis://redis:6379/0`                    |
+| `CELERY_RESULT_BACKEND` | Celery result backend URL | `redis://redis:6379/0`                    |
+| `POSTGRES_DB`           | PostgreSQL database name  | `ecommerce_db`                            |
+| `POSTGRES_USER`         | PostgreSQL username       | `ecommerce_user`                          |
+| `POSTGRES_PASSWORD`     | PostgreSQL password       | `ecommerce_password`                      |
+
+---
+
+## Tests
 
 Run tests locally:
 
@@ -412,17 +547,19 @@ The test suite covers:
 * Cache invalidation on product create, update, and delete
 * Cart operations
 * Checkout and stock validation
+* Celery task dispatch after checkout
 * Order listing and permissions
 * Payment simulation
 * Order status transitions
+* API rate limiting for product list, checkout, and login
 
 ---
 
-## CI with GitHub Actions
+## CI
 
-This project includes a GitHub Actions workflow that runs automated tests on push and pull requests to `main`.
+GitHub Actions runs the test suite on push and pull requests to `main`.
 
-The CI workflow:
+The workflow:
 
 * Checks out the repository
 * Sets up Python
@@ -430,7 +567,7 @@ The CI workflow:
 * Applies migrations
 * Runs Django tests
 
-The CI environment uses test environment variables and can run without Redis by falling back to Django's local memory cache.
+The CI environment can run without Redis by falling back to Django's local memory cache.
 
 ---
 
@@ -438,11 +575,11 @@ The CI environment uses test environment variables and can run without Redis by 
 
 ```text
 django-ecommerce-api/
-├── E_commerce/          # Django project settings and root URLs
-├── users/               # Custom user profile API
+├── E_commerce/          # Django settings, Celery app, and root URLs
+├── users/               # User profile API
 ├── product/             # Product and category APIs
 ├── cart/                # Cart models, serializers, views, and checkout service
-├── orders/              # Orders, order items, status flow, and payment simulation
+├── orders/              # Orders, status flow, payment simulation, and Celery tasks
 ├── screenshots/         # API screenshots
 ├── Dockerfile
 ├── docker-compose.yml
@@ -467,24 +604,26 @@ screenshots/swagger.png
 ## Known Notes
 
 * Payment is simulated and does not integrate with a real payment provider.
+* Order confirmation is currently represented by a background placeholder task, not a real email provider.
 * Product media files use local/container storage.
-* Redis is used as a cache layer, not as the primary database.
-* PostgreSQL remains the source of truth for products, orders, users, cart data, and stock.
+* Redis is used as a cache layer and Celery broker, not as the primary database.
+* PostgreSQL remains the source of truth for users, products, carts, orders, and stock.
 * Free-tier deployments may sleep or return temporary service errors.
-* This project is a backend portfolio project with production-aware patterns, not a full commercial e-commerce platform.
+* This is a backend portfolio project, not a full commercial e-commerce platform.
 
 ---
 
 ## Future Improvements
 
-* Add Celery with Redis for background jobs
-* Add API throttling and rate limiting
-* Improve production static/media file handling
+* Add real email provider integration for order confirmations
+* Add Celery Beat for scheduled tasks
+* Improve production static and media file handling
 * Add structured logging
 * Add real payment provider integration
 * Add more tests for authentication and profile endpoints
-* Improve deployment configuration for production Redis
-* Add coverage reporting
+* Improve production Redis configuration
+* Add test coverage reporting
+* Add object storage for media files
 
 ---
 
