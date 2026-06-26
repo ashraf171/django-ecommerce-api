@@ -25,6 +25,8 @@ class Pagination(PageNumberPagination):
 class CheckoutView(APIView):
     permission_classes = [IsAuthenticated]
     serializer_class = OrderSerializer
+    throttle_scope = "checkout"
+
 
     def post(self, request):
         try:

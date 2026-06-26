@@ -42,6 +42,13 @@ class ProductViewSet(viewsets.ModelViewSet):
     PRODUCT_LIST_CACHE_TIMEOUT = 60 * 5  # 5 minutes
     PRODUCT_LIST_CACHE_VERSION_KEY = "products:list:version"
 
+
+    def get_throttles(self):
+        if self.action == "list":
+            self.throttle_scope = "product_list"
+
+        return super().get_throttles()
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticatedOrReadOnly()]

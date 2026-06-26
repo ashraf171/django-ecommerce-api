@@ -4,7 +4,7 @@ from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
 )
-
+from users.views import LoginView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
@@ -14,7 +14,7 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
 
     # JWT
-    path('api/v1/auth/jwt/create/', TokenObtainPairView.as_view(), name='jwt-create'),
+    path('api/v1/auth/jwt/create/', LoginView.as_view(), name='jwt-create'),
     path('api/v1/auth/jwt/refresh/', TokenRefreshView.as_view(), name='jwt-refresh'),
 
     # Djoser (register + users + me)
