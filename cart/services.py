@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F
-
+from orders.tasks import fake_order_confirmation_task
 from cart.models import CartItem
 from orders.models import Order, OrderItem, Status
 from product.models import Product
@@ -73,5 +73,11 @@ def checkout(user):
         OrderItem.objects.bulk_create(order_items)
 
         items.delete()
+
+        
+        order_id = order.id
+        transaction.on_commit(
+        lambda: fake_order_confirmation_task.delay(order_id)
+        )
 
         return order
