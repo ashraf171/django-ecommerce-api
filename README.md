@@ -592,13 +592,11 @@ django-ecommerce-api/
 
 ---
 
-```md
 ## Screenshots
 
 Swagger documentation:
 
 ![Swagger Documentation](screenshots/swagger.png)
-```
 
 ---
 
