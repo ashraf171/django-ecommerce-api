@@ -76,8 +76,10 @@ def checkout(user):
 
         
         order_id = order.id
+
+        
         transaction.on_commit(
-        lambda: fake_order_confirmation_task.delay(order_id)
+            lambda: fake_order_confirmation_task.delay(order_id)
         )
 
         return order

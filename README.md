@@ -1,4 +1,4 @@
-# E-commerce REST API
+# Django E-commerce REST API
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Django](https://img.shields.io/badge/Django-REST%20Framework-green)
@@ -38,9 +38,10 @@ The project covers product management, cart and checkout workflows, order proces
 * [Tests](#tests)
 * [CI](#ci)
 * [Project Structure](#project-structure)
+* [Screenshots](#screenshots)
 * [Known Notes](#known-notes)
 * [Future Improvements](#future-improvements)
-
+* [Author](#author)
 ---
 
 ## Features
@@ -382,7 +383,7 @@ docker compose exec web python manage.py createsuperuser
 ### 6. Check Containers
 
 ```bash
-docker ps
+docker compose ps
 ```
 
 Expected containers:
@@ -409,7 +410,7 @@ PONG
 ### 8. Check Celery
 
 ```bash
-docker compose logs celery
+docker compose logs celery --tail=50
 ```
 
 Expected worker status:
@@ -591,12 +592,12 @@ django-ecommerce-api/
 
 ---
 
+```md
 ## Screenshots
 
-Swagger documentation screenshot:
+Swagger documentation:
 
-```text
-screenshots/swagger.png
+![Swagger Documentation](screenshots/swagger.png)
 ```
 
 ---
@@ -615,15 +616,12 @@ screenshots/swagger.png
 
 ## Future Improvements
 
-* Add real email provider integration for order confirmations
-* Add Celery Beat for scheduled tasks
-* Improve production static and media file handling
-* Add structured logging
-* Add real payment provider integration
-* Add more tests for authentication and profile endpoints
-* Improve production Redis configuration
-* Add test coverage reporting
-* Add object storage for media files
+- Improve production static/media file handling
+- Add structured logging
+- Add real payment provider integration
+- Add more tests for authentication and profile endpoints
+- Improve category slug handling
+- Add monitoring for background tasks
 
 ---
 
