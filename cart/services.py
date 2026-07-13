@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F
 from orders.tasks import fake_order_confirmation_task
-from cart.models import CartItem
+from cart.models import CartItem,Cart
 from orders.models import Order, OrderItem, Status
 from product.models import Product
 
@@ -12,8 +12,8 @@ from product.models import Product
 def checkout(user):
     with transaction.atomic():
         try:
-            cart = user.cart
-        except Exception:
+            cart = Cart.objects.get(user=user)
+        except Cart.DoesNotExist:
             raise ValidationError("Cart not found")
 
         items = (
@@ -47,9 +47,8 @@ def checkout(user):
 
         order = Order.objects.create(
             user=user,
-            status=Status.PENDING,
             total_price=total_price
-        )
+        ) 
 
         order_items = []
 
@@ -82,4 +81,4 @@ def checkout(user):
             lambda: fake_order_confirmation_task.delay(order_id)
         )
 
-        return order
+        return order   
