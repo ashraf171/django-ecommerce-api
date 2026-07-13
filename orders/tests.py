@@ -41,7 +41,19 @@ class CheckoutTests(TestCase):
             quantity=2,
             price=self.product.price
         )
+    def test_checkout_fails_when_cart_does_not_exist(self):
+        user_without_cart = get_user_model().objects.create_user(
+            username="no_cart_user",
+            email="no_cart@example.com",
+            password="testpass123"
+        )
 
+        with self.assertRaises(ValidationError) as context:
+            checkout(user_without_cart)
+
+        self.assertIn("Cart not found", str(context.exception))
+
+        
     def test_checkout_creates_order_and_order_item(self):
         order = checkout(self.user)
 
