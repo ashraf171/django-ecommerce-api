@@ -12,6 +12,28 @@ from django.core.cache import cache
 from rest_framework.response import Response
 
 
+PRODUCT_LIST_CACHE_TIMEOUT = 60 * 5  # 5 minutes
+PRODUCT_LIST_CACHE_VERSION_KEY = "products:list:version"
+
+
+def get_product_list_cache_version():
+    version = cache.get(PRODUCT_LIST_CACHE_VERSION_KEY)
+
+    if version is None:
+        version = 1
+        cache.set(PRODUCT_LIST_CACHE_VERSION_KEY, version, timeout=None)
+
+    return version
+
+
+def bump_product_list_cache_version():
+    try:
+        cache.incr(PRODUCT_LIST_CACHE_VERSION_KEY)
+    except ValueError:
+        cache.set(PRODUCT_LIST_CACHE_VERSION_KEY, 2, timeout=None)
+
+
+
 class ProductFilter(django_filters.FilterSet):
     min_price = django_filters.NumberFilter(field_name='price', lookup_expr='gte')
     max_price = django_filters.NumberFilter(field_name='price', lookup_expr='lte')
@@ -39,8 +61,6 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ['price', 'date_added', 'name']
     ordering = ['-date_added']
 
-    PRODUCT_LIST_CACHE_TIMEOUT = 60 * 5  # 5 minutes
-    PRODUCT_LIST_CACHE_VERSION_KEY = "products:list:version"
 
 
     def get_throttles(self):
@@ -55,20 +75,13 @@ class ProductViewSet(viewsets.ModelViewSet):
         return [IsAdminUser()]
 
     def _get_product_list_cache_version(self):
-        version = cache.get(self.PRODUCT_LIST_CACHE_VERSION_KEY)
-
-        if version is None:
-            version = 1
-            cache.set(self.PRODUCT_LIST_CACHE_VERSION_KEY, version, timeout=None)
-
-        return version
+        return get_product_list_cache_version()
 
     def _bump_product_list_cache_version(self):
-        try:
-            cache.incr(self.PRODUCT_LIST_CACHE_VERSION_KEY)
-        except ValueError:
-            cache.set(self.PRODUCT_LIST_CACHE_VERSION_KEY, 2, timeout=None)
-
+        bump_product_list_cache_version()
+    
+    
+    
     def list(self, request, *args, **kwargs):
         cache_version = self._get_product_list_cache_version()
 
@@ -86,7 +99,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         cache.set(
             cache_key,
             response.data,
-            timeout=self.PRODUCT_LIST_CACHE_TIMEOUT
+            timeout=PRODUCT_LIST_CACHE_TIMEOUT
         )
 
         response["X-Cache"] = "MISS"
@@ -114,3 +127,11 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             return [IsAuthenticatedOrReadOnly()]
         return [IsAdminUser()]
+    
+    def perform_update(self, serializer):
+        serializer.save()
+        bump_product_list_cache_version()
+
+    def perform_destroy(self, instance):
+        instance.delete()
+        bump_product_list_cache_version()
