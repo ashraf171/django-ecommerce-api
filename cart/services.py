@@ -4,7 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.db.models import F
 from orders.tasks import fake_order_confirmation_task
-from cart.models import CartItem,Cart
+from cart.models import Cart, CartItem
 from orders.models import Order, OrderItem, Status
 from product.models import Product
 
@@ -16,16 +16,16 @@ def checkout(user):
         except Cart.DoesNotExist:
             raise ValidationError("Cart not found")
 
-        items = (
+        items_qs  = (
             CartItem.objects
             .select_for_update()
             .select_related("product")
             .filter(cart=cart)
         )
-
-        if not items.exists():
+        items = list(items_qs)
+        if not items:
             raise ValidationError("Cart must not be empty")
-
+        
         product_ids = [item.product_id for item in items]
 
         products = {
@@ -71,8 +71,9 @@ def checkout(user):
 
         OrderItem.objects.bulk_create(order_items)
 
-        items.delete()
-
+        CartItem.objects.filter(
+                id__in=[item.id for item in items]
+                ).delete()
         
         order_id = order.id
 
