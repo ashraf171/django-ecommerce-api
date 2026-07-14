@@ -91,16 +91,16 @@ class OrderViewSet(
 
             order.save(update_fields=["status", "paid_at", "payment_id", "updated_at"])
 
-        return Response(
-            {
-                "detail": "Payment successful",
-                "order_id": order.id,
-                "status": order.status,
-                "payment_id": order.payment_id,
-                "paid_at": order.paid_at,
-            },
-            status=status.HTTP_200_OK
-        )
+        return Response({
+            "detail": "Payment successful",
+            "order_id": order.id,
+            "status": order.status,
+            "payment_id": order.payment_id,
+            "paid_at": order.paid_at,
+            "updated_at": order.updated_at,
+            }
+            
+            )
 
     @action(detail=True, methods=['patch'])
     def change_status(self, request, pk=None):

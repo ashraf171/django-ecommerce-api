@@ -226,6 +226,13 @@ class CheckoutTests(TestCase):
         self.assertEqual(response.data["detail"], "Payment successful")
         self.assertEqual(response.data["order_id"], order.id)
         self.assertEqual(response.data["status"], Status.PAID)
+        self.assertIn("payment_id", response.data)
+        self.assertIn("paid_at", response.data)
+        self.assertIn("updated_at", response.data)
+
+        self.assertIsNotNone(response.data["payment_id"])
+        self.assertIsNotNone(response.data["paid_at"])
+        self.assertIsNotNone(response.data["updated_at"])
 
 
         
