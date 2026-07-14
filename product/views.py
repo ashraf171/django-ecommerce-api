@@ -47,7 +47,7 @@ class ProductFilter(django_filters.FilterSet):
 
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related('category').all().order_by('date_added')
+    queryset = Product.objects.select_related('category').all()
     serializer_class = ProductSerializer
     filterset_class = ProductFilter
 
