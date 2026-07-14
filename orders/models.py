@@ -28,8 +28,8 @@ class Order(models.Model):
     class Meta:
         ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['created_at']),
-            models.Index(fields=['user']),
+            models.Index(fields=['created_at'], name='order_created_at_idx'),
+            models.Index(fields=['user', '-created_at'], name='order_user_created_idx'),
         ]
 
     def __str__(self):
