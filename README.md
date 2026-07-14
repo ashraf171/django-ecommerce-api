@@ -14,17 +14,6 @@ The project covers product management, cart and checkout workflows, order proces
 
 ---
 
-## Live API
-
-| Resource       | Link                                                       |
-| -------------- | ---------------------------------------------------------- |
-| Swagger UI     | https://django-ecommerce-api-gugt.onrender.com/api/docs/   |
-| OpenAPI Schema | https://django-ecommerce-api-gugt.onrender.com/api/schema/ |
-
-> The live deployment is hosted on Render. It may take a few seconds to wake up if inactive.
-
----
-
 ## Table of Contents
 
 * [Features](#features)
@@ -32,6 +21,7 @@ The project covers product management, cart and checkout workflows, order proces
 * [Architecture](#architecture)
 * [API Endpoints](#api-endpoints)
 * [Technical Highlights](#technical-highlights)
+* [Order Status Flow](#order-status-flow)
 * [Run with Docker Compose](#run-with-docker-compose)
 * [Run Locally](#run-locally)
 * [Environment Variables](#environment-variables)
@@ -42,6 +32,7 @@ The project covers product management, cart and checkout workflows, order proces
 * [Known Notes](#known-notes)
 * [Future Improvements](#future-improvements)
 * [Author](#author)
+
 ---
 
 ## Features
@@ -105,8 +96,7 @@ The project covers product management, cart and checkout workflows, order proces
 | Filtering         | django-filter                 |
 | Containerization  | Docker, Docker Compose        |
 | CI                | GitHub Actions                |
-| Deployment        | Render                        |
-| Production Server | Gunicorn                      |
+| WSGI Server       | Gunicorn                      |
 
 ---
 
@@ -262,7 +252,7 @@ Cache invalidation is handled when products are created, updated, or deleted.
 
 The implementation uses cache versioning. When product data changes, the cache version is incremented, so old cached product list responses are ignored and fresh data is cached again.
 
-If `REDIS_URL` is not provided, the project falls back to Django's local memory cache. This keeps tests and CI simple while still supporting Redis in Docker and deployed environments.
+If `REDIS_URL` is not provided, the project falls back to Django's local memory cache. This keeps tests and CI simple while allowing Redis to be used in Docker-based environments through `REDIS_URL`.
 
 ---
 
@@ -512,18 +502,18 @@ celery -A E_commerce worker -l info --pool=solo
 
 ## Environment Variables
 
-| Variable                | Description               | Example                                   |
-| ----------------------- | ------------------------- | ----------------------------------------- |
-| `SECRET_KEY`            | Django secret key         | `your-secret-key`                         |
-| `DEBUG`                 | Django debug mode         | `True`                                    |
-| `ALLOWED_HOSTS`         | Allowed hosts             | `localhost,127.0.0.1`                     |
-| `DATABASE_URL`          | Database connection URL   | `postgres://user:password@db:5432/dbname` |
-| `REDIS_URL`             | Redis cache URL           | `redis://redis:6379/1`                    |
-| `CELERY_BROKER_URL`     | Celery broker URL         | `redis://redis:6379/0`                    |
-| `CELERY_RESULT_BACKEND` | Celery result backend URL | `redis://redis:6379/0`                    |
-| `POSTGRES_DB`           | PostgreSQL database name  | `ecommerce_db`                            |
-| `POSTGRES_USER`         | PostgreSQL username       | `ecommerce_user`                          |
-| `POSTGRES_PASSWORD`     | PostgreSQL password       | `ecommerce_password`                      |
+| Variable                | Description              | Example                                   |
+| ----------------------- | ------------------------ | ----------------------------------------- |
+| `SECRET_KEY`            | Django secret key        | `your-secret-key`                         |
+| `DEBUG`                 | Django debug mode        | `True`                                    |
+| `ALLOWED_HOSTS`         | Allowed hosts            | `localhost,127.0.0.1`                     |
+| `DATABASE_URL`          | Database connection URL  | `postgres://user:password@db:5432/dbname` |
+| `REDIS_URL`             | Redis cache URL          | `redis://redis:6379/1`                    |
+| `CELERY_BROKER_URL`     | Celery broker URL        | `redis://redis:6379/0`                    |
+| `CELERY_RESULT_BACKEND` | Celery result backend    | `redis://redis:6379/0`                    |
+| `POSTGRES_DB`           | PostgreSQL database name | `ecommerce_db`                            |
+| `POSTGRES_USER`         | PostgreSQL username      | `ecommerce_user`                          |
+| `POSTGRES_PASSWORD`     | PostgreSQL password      | `ecommerce_password`                      |
 
 ---
 
@@ -607,19 +597,19 @@ Swagger documentation:
 * Product media files use local/container storage.
 * Redis is used as a cache layer and Celery broker, not as the primary database.
 * PostgreSQL remains the source of truth for users, products, carts, orders, and stock.
-* Free-tier deployments may sleep or return temporary service errors.
+* A public deployment is not currently active; the project can be reviewed and run locally with Docker Compose.
 * This is a backend portfolio project, not a full commercial e-commerce platform.
 
 ---
 
 ## Future Improvements
 
-- Improve production static/media file handling
-- Add structured logging
-- Add real payment provider integration
-- Add more tests for authentication and profile endpoints
-- Improve category slug handling
-- Add monitoring for background tasks
+* Improve production static/media file handling
+* Add structured logging
+* Add real payment provider integration
+* Add more tests for authentication and profile endpoints
+* Improve category slug handling
+* Add monitoring for background tasks
 
 ---
 
