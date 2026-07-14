@@ -5,7 +5,7 @@ from .serializers import OrderSerializer
 from cart.services import checkout
 from rest_framework.permissions import IsAuthenticated
 from .models import Order,Status
-
+from django.shortcuts import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework import status
 from rest_framework import viewsets
@@ -70,10 +70,11 @@ class OrderViewSet(
     @action(detail=True, methods=['post'])
     def pay(self, request, pk=None):
         with transaction.atomic():
-            order = (
-                self.get_queryset()
-                .select_for_update()
-                .get(pk=pk)
+            order = get_object_or_404(
+               self.get_queryset().select_for_update(),
+               pk=pk
+                
+               
             )
 
             if order.status != Status.PENDING:

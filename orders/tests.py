@@ -7,7 +7,7 @@ from cart.models import Cart, CartItem
 from orders.models import Order, OrderItem, Status
 from cart.services import checkout
 from product.models import Category, Product
-
+from django.urls import reverse
 
 User = get_user_model()
 
@@ -356,3 +356,28 @@ class CheckoutTests(TestCase):
         order.refresh_from_db()
 
         self.assertEqual(order.status, Status.PENDING)
+
+
+    def test_user_cannot_pay_another_users_order(self):
+        other_user = User.objects.create_user(
+            username="otheruser",
+            email="other@example.com",
+            password="testpass123"
+        )
+
+        order = Order.objects.create(
+            user=self.user,
+            total_price=Decimal("100.00")
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=other_user)
+
+        response = client.post(f"/api/v1/orders/{order.id}/pay/")
+
+        self.assertIn(response.status_code, [403, 404])
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, Status.PENDING)
+        self.assertIsNone(order.payment_id)
+        self.assertIsNone(order.paid_at)
