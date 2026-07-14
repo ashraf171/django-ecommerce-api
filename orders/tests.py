@@ -1,13 +1,16 @@
 from decimal import Decimal
-from rest_framework.test import APIClient
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
-from django.test import TestCase
 from django.core.exceptions import ValidationError
+from django.test import TestCase
+from rest_framework.test import APIClient
+
 from cart.models import Cart, CartItem
-from orders.models import Order, OrderItem, Status
 from cart.services import checkout
+from orders.models import Order, OrderItem, Status
 from product.models import Category, Product
-from django.urls import reverse
+
 
 User = get_user_model()
 
@@ -17,12 +20,12 @@ class CheckoutTests(TestCase):
         self.user = User.objects.create_user(
             username="testuser",
             email="test@example.com",
-            password="testpass123"
+            password="testpass123",
         )
 
         self.category = Category.objects.create(
             name="Electronics",
-            slug="electronics"
+            slug="electronics",
         )
 
         self.product = Product.objects.create(
@@ -30,7 +33,7 @@ class CheckoutTests(TestCase):
             name="iPhone 15",
             description="Test product",
             price=Decimal("100.00"),
-            in_stock=10
+            in_stock=10,
         )
 
         self.cart = Cart.objects.create(user=self.user)
@@ -39,21 +42,20 @@ class CheckoutTests(TestCase):
             cart=self.cart,
             product=self.product,
             quantity=2,
-            price=self.product.price
+            price=self.product.price,
         )
-        
+
     def test_checkout_fails_when_cart_does_not_exist(self):
-        user_without_cart = get_user_model().objects.create_user(
+        user_without_cart = User.objects.create_user(
             username="no_cart_user",
             email="no_cart@example.com",
-            password="testpass123"
+            password="testpass123",
         )
 
         with self.assertRaises(ValidationError) as context:
             checkout(user_without_cart)
 
         self.assertIn("Cart not found", str(context.exception))
-
 
     def test_checkout_creates_order_and_order_item(self):
         order = checkout(self.user)
@@ -63,7 +65,16 @@ class CheckoutTests(TestCase):
         self.assertEqual(order.user, self.user)
         self.assertEqual(order.status, Status.PENDING)
         self.assertEqual(order.total_price, Decimal("200.00"))
-    
+
+    @patch("cart.services.fake_order_confirmation_task.delay")
+    def test_checkout_dispatches_confirmation_task_after_commit(self, mock_delay):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            order = checkout(self.user)
+            mock_delay.assert_not_called()
+
+        self.assertEqual(len(callbacks), 1)
+        mock_delay.assert_called_once_with(order.id)
+
     def test_api_checkout_creates_order_decreases_stock_and_clears_cart(self):
         client = APIClient()
         client.force_authenticate(user=self.user)
@@ -71,7 +82,6 @@ class CheckoutTests(TestCase):
         response = client.post("/api/v1/orders/checkout/")
 
         self.assertEqual(response.status_code, 201)
-
         self.assertEqual(Order.objects.count(), 1)
         self.assertEqual(OrderItem.objects.count(), 1)
 
@@ -89,9 +99,7 @@ class CheckoutTests(TestCase):
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.in_stock, 8)
-
         self.assertEqual(CartItem.objects.filter(cart=self.cart).count(), 0)
-    
 
     def test_api_checkout_fails_when_cart_is_empty(self):
         client = APIClient()
@@ -102,13 +110,11 @@ class CheckoutTests(TestCase):
         response = client.post("/api/v1/orders/checkout/")
 
         self.assertEqual(response.status_code, 400)
-
         self.assertEqual(Order.objects.count(), 0)
         self.assertEqual(OrderItem.objects.count(), 0)
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.in_stock, 10)
-    
 
     def test_api_checkout_fails_when_stock_is_insufficient(self):
         client = APIClient()
@@ -120,13 +126,11 @@ class CheckoutTests(TestCase):
         response = client.post("/api/v1/orders/checkout/")
 
         self.assertEqual(response.status_code, 400)
-
         self.assertEqual(Order.objects.count(), 0)
         self.assertEqual(OrderItem.objects.count(), 0)
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.in_stock, 10)
-
         self.assertEqual(CartItem.objects.filter(cart=self.cart).count(), 1)
 
     def test_unauthenticated_user_cannot_checkout(self):
@@ -135,31 +139,29 @@ class CheckoutTests(TestCase):
         response = client.post("/api/v1/orders/checkout/")
 
         self.assertEqual(response.status_code, 401)
-
         self.assertEqual(Order.objects.count(), 0)
         self.assertEqual(OrderItem.objects.count(), 0)
 
         self.product.refresh_from_db()
         self.assertEqual(self.product.in_stock, 10)
-
         self.assertEqual(CartItem.objects.filter(cart=self.cart).count(), 1)
 
     def test_user_can_list_only_own_orders(self):
         own_order = checkout(self.user)
 
         other_user = User.objects.create_user(
-        username="otheruser",
-        email="other@example.com",
-        password="testpass123",
+            username="otheruser",
+            email="other@example.com",
+            password="testpass123",
         )
 
         other_cart = Cart.objects.create(user=other_user)
 
         CartItem.objects.create(
-        cart=other_cart,
-        product=self.product,
-        quantity=1,
-        price=self.product.price,
+            cart=other_cart,
+            product=self.product,
+            quantity=1,
+            price=self.product.price,
         )
 
         other_order = checkout(other_user)
@@ -172,29 +174,30 @@ class CheckoutTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         results = (
-        response.data["results"]
-        if isinstance(response.data, dict) and "results" in response.data
-        else response.data
+            response.data["results"]
+            if isinstance(response.data, dict) and "results" in response.data
+            else response.data
         )
 
         order_ids = [order["id"] for order in results]
 
         self.assertIn(own_order.id, order_ids)
         self.assertNotIn(other_order.id, order_ids)
+
     def test_user_cannot_retrieve_another_users_order(self):
         other_user = User.objects.create_user(
-        username="otheruser2",
-        email="other2@example.com",
-        password="testpass123",
+            username="otheruser2",
+            email="other2@example.com",
+            password="testpass123",
         )
 
         other_cart = Cart.objects.create(user=other_user)
 
         CartItem.objects.create(
-        cart=other_cart,
-        product=self.product,
-        quantity=1,
-        price=self.product.price,
+            cart=other_cart,
+            product=self.product,
+            quantity=1,
+            price=self.product.price,
         )
 
         other_order = checkout(other_user)
@@ -205,7 +208,6 @@ class CheckoutTests(TestCase):
         response = client.get(f"/api/v1/orders/{other_order.id}/")
 
         self.assertEqual(response.status_code, 404)
-
 
     def test_user_can_pay_pending_order(self):
         order = checkout(self.user)
@@ -234,8 +236,6 @@ class CheckoutTests(TestCase):
         self.assertIsNotNone(response.data["paid_at"])
         self.assertIsNotNone(response.data["updated_at"])
 
-
-        
     def test_user_cannot_pay_already_paid_order(self):
         order = checkout(self.user)
 
@@ -261,10 +261,9 @@ class CheckoutTests(TestCase):
         self.assertEqual(order.payment_id, old_payment_id)
         self.assertEqual(order.paid_at, old_paid_at)
         self.assertEqual(
-        second_response.data["detail"],
-        "Only PENDING orders can be paid. Current status is PAID"
-        )   
-
+            second_response.data["detail"],
+            "Only PENDING orders can be paid. Current status is PAID",
+        )
 
     def test_checkout_decreases_product_stock(self):
         checkout(self.user)
@@ -277,6 +276,7 @@ class CheckoutTests(TestCase):
         checkout(self.user)
 
         self.assertEqual(CartItem.objects.filter(cart=self.cart).count(), 0)
+
     def test_checkout_fails_when_cart_is_empty(self):
         self.cart.items.all().delete()
 
@@ -284,7 +284,6 @@ class CheckoutTests(TestCase):
             checkout(self.user)
 
         self.assertEqual(Order.objects.count(), 0)
-
 
     def test_checkout_fails_when_quantity_is_greater_than_stock(self):
         self.cart_item.quantity = 20
@@ -297,13 +296,13 @@ class CheckoutTests(TestCase):
 
         self.assertEqual(Order.objects.count(), 0)
         self.assertEqual(self.product.in_stock, 10)
-    
+
     def test_admin_can_cancel_order_and_restore_stock(self):
         admin = User.objects.create_superuser(
-        username="admin",
-        email="admin@example.com",
-        password="adminpass123"
-    )
+            username="admin",
+            email="admin@example.com",
+            password="adminpass123",
+        )
 
         order = checkout(self.user)
 
@@ -311,9 +310,9 @@ class CheckoutTests(TestCase):
         client.force_authenticate(user=admin)
 
         response = client.patch(
-        f"/api/v1/orders/{order.id}/change_status/",
-        {"status": Status.CANCELED},
-        format="json"
+            f"/api/v1/orders/{order.id}/change_status/",
+            {"status": Status.CANCELED},
+            format="json",
         )
 
         self.assertEqual(response.status_code, 200)
@@ -324,7 +323,6 @@ class CheckoutTests(TestCase):
         self.assertEqual(order.status, Status.CANCELED)
         self.assertEqual(self.product.in_stock, 10)
 
-
     def test_normal_user_cannot_change_order_status(self):
         order = checkout(self.user)
 
@@ -332,19 +330,18 @@ class CheckoutTests(TestCase):
         client.force_authenticate(user=self.user)
 
         response = client.patch(
-        f"/api/v1/orders/{order.id}/change_status/",
-        {"status": Status.CANCELED},
-        format="json"
+            f"/api/v1/orders/{order.id}/change_status/",
+            {"status": Status.CANCELED},
+            format="json",
         )
 
         self.assertEqual(response.status_code, 403)
 
-
     def test_invalid_status_transition_is_rejected(self):
         admin = User.objects.create_superuser(
-        username="admin2",
-        email="admin2@example.com",
-        password="adminpass123"
+            username="admin2",
+            email="admin2@example.com",
+            password="adminpass123",
         )
 
         order = checkout(self.user)
@@ -353,9 +350,9 @@ class CheckoutTests(TestCase):
         client.force_authenticate(user=admin)
 
         response = client.patch(
-        f"/api/v1/orders/{order.id}/change_status/",
-        {"status": Status.DELIVERED},
-        format="json"
+            f"/api/v1/orders/{order.id}/change_status/",
+            {"status": Status.DELIVERED},
+            format="json",
         )
 
         self.assertEqual(response.status_code, 400)
@@ -364,17 +361,16 @@ class CheckoutTests(TestCase):
 
         self.assertEqual(order.status, Status.PENDING)
 
-
     def test_user_cannot_pay_another_users_order(self):
         other_user = User.objects.create_user(
             username="otheruser",
             email="other@example.com",
-            password="testpass123"
+            password="testpass123",
         )
 
         order = Order.objects.create(
             user=self.user,
-            total_price=Decimal("100.00")
+            total_price=Decimal("100.00"),
         )
 
         client = APIClient()
@@ -388,31 +384,28 @@ class CheckoutTests(TestCase):
         self.assertEqual(order.status, Status.PENDING)
         self.assertIsNone(order.payment_id)
         self.assertIsNone(order.paid_at)
-    
-
-
 
     def test_admin_can_list_all_orders(self):
         other_user = User.objects.create_user(
             username="otheruser2",
             email="other2@example.com",
-            password="testpass123"
+            password="testpass123",
         )
 
         admin_user = User.objects.create_superuser(
             username="orderadmin",
             email="orderadmin@example.com",
-            password="adminpass123"
+            password="adminpass123",
         )
 
         first_order = Order.objects.create(
             user=self.user,
-            total_price=Decimal("100.00")
+            total_price=Decimal("100.00"),
         )
 
         second_order = Order.objects.create(
             user=other_user,
-            total_price=Decimal("200.00")
+            total_price=Decimal("200.00"),
         )
 
         client = APIClient()
