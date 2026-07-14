@@ -381,3 +381,48 @@ class CheckoutTests(TestCase):
         self.assertEqual(order.status, Status.PENDING)
         self.assertIsNone(order.payment_id)
         self.assertIsNone(order.paid_at)
+    
+
+
+
+    def test_admin_can_list_all_orders(self):
+        other_user = User.objects.create_user(
+            username="otheruser2",
+            email="other2@example.com",
+            password="testpass123"
+        )
+
+        admin_user = User.objects.create_superuser(
+            username="orderadmin",
+            email="orderadmin@example.com",
+            password="adminpass123"
+        )
+
+        first_order = Order.objects.create(
+            user=self.user,
+            total_price=Decimal("100.00")
+        )
+
+        second_order = Order.objects.create(
+            user=other_user,
+            total_price=Decimal("200.00")
+        )
+
+        client = APIClient()
+        client.force_authenticate(user=admin_user)
+
+        response = client.get("/api/v1/orders/")
+
+        self.assertEqual(response.status_code, 200)
+
+        data = response.data
+
+        if isinstance(data, dict) and "results" in data:
+            results = data["results"]
+        else:
+            results = data
+
+        order_ids = [item["id"] for item in results]
+
+        self.assertIn(first_order.id, order_ids)
+        self.assertIn(second_order.id, order_ids)
